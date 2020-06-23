@@ -1,0 +1,173 @@
+---
+title: "coffee-roulette"
+author: "Genevieve Phillips"
+date: "19/06/2020"
+output: html_document
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input, output_dir = "./outputs/", 
+      output_format = "html_document"
+    )
+  })
+---
+
+This code will run a 'coffee' roulette of sorts - it will pair people together with someone from another team (CSIRO / AAD / IMAS).
+
+The code can be run multiple times, however I haven't included any functionality to stop the same pairing happening again and again through time. There would need to be some comparison of the output and then the code re-run - if anyone would like to add to / modify the code to do this, please, feel free to let me know how to do that!
+
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_knit$set(root.dir = "./")
+```
+
+```{r load_data}
+library(readr)
+library(dplyr)
+coffee <- read_csv("../data/coffee-roulette.csv") # this needs to have at a minimum, Name and Team. Need to modify code to add contact info.
+df <- coffee %>% select(Name, Team)
+```
+
+```{r coffee_function}
+coffee.function <- function(df,peeps){
+  repeat{
+test <- sample_n(df, peeps) #first coffee peep
+test2 <- sample_n(df, peeps) #second coffee peep
+
+if(test$Team != test2$Team) break #if these peeps are not in the same team, STOP!
+  }
+  test3 <- rbind(test, test2)
+  }
+```
+
+```{r repeat_to_get_matches}
+library(tidyr)
+library(data.table)
+
+coffee.time <- df[FALSE,]
+coffee.time$pairing <- as.numeric() #this should be the repeats
+
+for (i in 1:20){
+  coffee.loop <- coffee.function(df, 1)
+  coffee.loop$pairing <- i
+  coffee.time <- unique(rbindlist(list(coffee.time, coffee.loop)), by = 'Name') #remove repeated Names
+  
+   }
+  
+coffee.schedule1 <- coffee.time %>%
+  transform(pairing = as.factor(pairing)) %>%
+  group_by(pairing) %>%
+  mutate(n_people = n(), t = seq_along(pairing)) %>%
+  filter(n_people == 2) %>% #remove matches with < 2 people
+  mutate(buyer = if_else(t == 1, "buy coffee!", "choose venue!")) %>%
+  select(Name, Team, pairing, buyer)
+
+
+```
+
+
+```{r round2}
+
+df2 <- anti_join(df, coffee.schedule1, by = 'Name')
+if (nrow(df2) >2){
+
+coffee.time2 <- df2[FALSE,]
+coffee.time2$pairing <- as.numeric() #this should be the repeats
+
+for (i in 1:10){
+  coffee.loop2 <- coffee.function(df2, 1)
+  coffee.loop2$pairing <- i
+  coffee.time2 <- unique(rbindlist(list(coffee.time2, coffee.loop2)), by = 'Name') #remove repeated Names
+  
+   }
+  
+coffee.schedule2 <- coffee.time2 %>%
+  transform(pairing = as.factor(pairing)) %>%
+  group_by(pairing) %>%
+  mutate(n_people = n(), t = seq_along(pairing)) %>%
+  filter(n_people == 2) %>% #remove matches with < 2 people
+  mutate(buyer = if_else(t == 1, "buy coffee!", "choose venue!")) %>%
+  select(Name, Team, pairing, buyer)
+
+mid_schedule <- unique(rbindlist(list(coffee.schedule1, coffee.schedule2)), by = 'Name')
+}else {mid_schedule <- coffee.schedule1}
+
+```
+
+```{r round3}
+
+df3 <- anti_join(df, mid_schedule, by = 'Name')
+
+if(nrow(df3) >2){
+
+coffee.time3 <- df3[FALSE,]
+coffee.time3$pairing <- as.numeric() #this should be the repeats
+
+for (i in 1:10){
+  coffee.loop3 <- coffee.function(df3, 1)
+  coffee.loop3$pairing <- i
+  coffee.time3 <- unique(rbindlist(list(coffee.time3, coffee.loop3)), by = 'Name') #remove repeated Names
+  
+   }
+  
+coffee.schedule3 <- coffee.time3 %>%
+  transform(pairing = as.factor(pairing)) %>%
+  group_by(pairing) %>%
+  mutate(n_people = n(), t = seq_along(pairing)) %>%
+  filter(n_people == 2) %>% #remove matches with < 2 people
+  mutate(buyer = if_else(t == 1, "buy coffee!", "choose venue!")) %>%
+  select(Name, Team, pairing, buyer)
+
+final_schedule <- unique(rbindlist(list(mid_schedule, coffee.schedule3)), by = 'Name')
+} else{final_schedule <- mid_schedule}
+
+```
+
+```{r missing}
+missing <- anti_join(df, final_schedule)
+
+if(nrow(missing) > 2){
+  coffee.time4 <- missing[FALSE,]
+coffee.time4$pairing <- as.numeric() #this should be the repeats
+
+for (i in 1:10){
+  coffee.loop4 <- coffee.function(missing, 1)
+  coffee.loop4$pairing <- i
+  coffee.time4 <- unique(rbindlist(list(coffee.time4, coffee.loop4)), by = 'Name') #remove repeated Names
+  
+   }
+  
+coffee.schedule4 <- coffee.time4 %>%
+  transform(pairing = as.factor(pairing)) %>%
+  group_by(pairing) %>%
+  mutate(n_people = n(), t = seq_along(pairing)) %>%
+  filter(n_people == 2) %>% #remove matches with < 2 people
+  mutate(buyer = if_else(t == 1, "buy coffee!", "choose venue!")) %>%
+  select(Name, Team, pairing, buyer)
+
+final_final_schedule <- unique(rbindlist(list(final_schedule, coffee.schedule4)), by = 'Name')
+} else{final_final_schedule <- final_schedule}
+
+
+wtf <- anti_join(df, final_final_schedule, by='Name')
+
+
+```
+
+## Coffee Pairings
+
+```{r coffee_schedule, include = TRUE}
+
+library(knitr)
+
+# kable(coffee.schedule)
+kable(final_final_schedule)
+```
+
+## These people have a bye this week
+
+```{r bye_schedule, include = TRUE}
+
+kable(wtf)
+```
+
